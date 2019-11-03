@@ -10,6 +10,12 @@ const cors = require('cors');
 
 var upload = require('./routes/upload');
 
+var dd_options = {
+  response_code: true,
+  tags: ['app:my_app'],
+};
+
+var connect_datadog = require('connect-datadog')(dd_options);
 
 var app = express();
 // app.use('/public', express.static(__dirname + '/public'));
@@ -29,11 +35,7 @@ app.use(cookieParser());
 app.use(fileUpload());
 app.use(express.static(path.join(__dirname, 'public')));
 
-
 app.use('/upload', upload);
-
-
-
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -52,5 +54,7 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
+
+app.use(connect_datadog);
 
 module.exports = app;
