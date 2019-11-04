@@ -9,13 +9,14 @@ const fileUpload = require('express-fileupload');
 const cors = require('cors');
 
 var upload = require('./routes/upload');
+var metrics = require('datadog-metrics');
 
-var dd_options = {
+var ddOptions = {
   response_code: true,
   tags: ['app:my_app'],
 };
 
-var connect_datadog = require('connect-datadog')(dd_options);
+var connectDatadog = require('connect-datadog')(ddOptions);
 
 var app = express();
 // app.use('/public', express.static(__dirname + '/public'));
@@ -27,6 +28,17 @@ app.use('/public', express.static(path.join(__dirname, '/public')));
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
+metrics.init({ host: 'myhost', prefix: 'myapp.' });
+
+function collectMemoryStats() {
+  var memUsage = process.memoryUsage();
+  metrics.gauge('memory.rss', memUsage.rss);
+  metrics.gauge('memory.heapTotal', memUsage.heapTotal);
+  metrics.gauge('memory.heapUsed', memUsage.heapUsed);
+  metrics.increment('memory.statsReported');
+}
+setInterval(collectMemoryStats, 5000);
+
 app.use(logger('dev'));
 app.use(cors());
 app.use(bodyParser.json());
@@ -36,6 +48,7 @@ app.use(fileUpload());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/upload', upload);
+app.use(connectDatadog);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -54,7 +67,5 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
-
-app.use(connect_datadog);
 
 module.exports = app;
